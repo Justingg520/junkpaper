@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>废纸篓学刊 — 经同行评审的一无是处研究期刊</title>
+<meta name="description" content="废纸篓学刊：匿名投稿、同行评议、严肃外壳包裹的荒诞内容。">
+<meta property="og:title" content="废纸篓学刊">
+<meta property="og:description" content="经同行评审的一无是处研究期刊">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --ink: #0a0a0a;
+    --paper: #f5f0e8;
+    --paper-dark: #ede7d4;
+    --red: #8b1a1a;
+    --gray: #6b6560;
+    --border: #2a2a2a;
+    --rule: 1px solid var(--border);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Noto Serif SC', 'Songti SC', serif;
+    font-size: 16px;
+    line-height: 1.75;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; opacity: 0.4;
+  }
+  .page { display: none; animation: fadeIn 0.3s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+  /* ─── HEADER ─── */
+  header {
+    border-bottom: 3px double var(--border);
+    padding: 0 0 12px;
+    background: var(--paper);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-top {
+    display: flex; justify-content: space-between;
+    padding: 10px 24px 0;
+    font-family: 'Courier Prime', monospace;
+    font-size: 10px; color: var(--gray);
+  }
+  .masthead { text-align: center; padding: 10px 24px 14px; border-bottom: var(--rule); border-top: var(--rule); margin: 8px 0; }
+  .journal-name { font-family: 'Noto Serif SC', serif; font-weight: 700; font-size: clamp(26px,6vw,50px); letter-spacing: 0.25em; line-height: 1; }
+  .journal-sub { font-size: clamp(10px,2vw,12px); color: var(--gray); margin-top: 5px; font-style: italic; letter-spacing: 0.05em; }
+  .header-nav { display: flex; justify-content: center; padding: 0 24px; }
+  .nav-btn { background: none; border: none; font-family: 'Noto Serif SC', serif; font-size: 13px; color: var(--gray); cursor: pointer; padding: 4px 18px; border-right: var(--rule); transition: color 0.2s; letter-spacing: 0.05em; }
+  .nav-btn:first-child { border-left: var(--rule); }
+  .nav-btn:hover, .nav-btn.active { color: var(--ink); font-weight: 700; }
+
+  /* ─── LAYOUT ─── */
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+  .section-rule { display: flex; align-items: center; gap: 12px; margin: 0 0 24px; }
+  .section-rule::before, .section-rule::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .section-label { font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 0.15em; color: var(--gray); white-space: nowrap; }
+
+  /* ─── HOME ─── */
+  .homepage-header { display: grid; grid-template-columns: 1fr 1fr; border: var(--rule); margin-bottom: 32px; }
+  .featured-post { padding: 24px; border-right: var(--rule); cursor: pointer; transition: background 0.2s; }
+  .featured-post:hover { background: var(--paper-dark); }
+  .featured-label { font-family: 'Courier Prime', monospace; font-size: 9px; letter-spacing: 0.2em; color: var(--red); margin-bottom: 10px; text-transform: uppercase; }
+  .featured-title { font-size: 18px; line-height: 1.5; margin-bottom: 12px; font-weight: 700; }
+  .featured-abstract { font-size: 12px; font-style: italic; color: var(--gray); line-height: 1.6; }
+  .sidebar-posts { display: flex; flex-direction: column; }
+  .sidebar-item { padding: 14px 16px; border-bottom: var(--rule); cursor: pointer; transition: background 0.2s; }
+  .sidebar-item:last-child { border-bottom: none; }
+  .sidebar-item:hover { background: var(--paper-dark); }
+  .sidebar-item-title { font-size: 13px; line-height: 1.5; margin-bottom: 4px; }
+  .sidebar-meta { font-family: 'Courier Prime', monospace; font-size: 10px; color: var(--gray); }
+
+  .post-list { display: flex; flex-direction: column; }
+  .post-card { display: grid; grid-template-columns: 52px 1fr auto; border: var(--rule); border-bottom: none; cursor: pointer; transition: background 0.15s; }
+  .post-card:last-child { border-bottom: var(--rule); }
+  .post-card:hover { background: var(--paper-dark); }
+  .post-number { border-right: var(--rule); display: flex; align-items: center; justify-content: center; font-family: 'Courier Prime', monospace; font-size: 9px; color: var(--gray); writing-mode: vertical-rl; letter-spacing: 0.1em; padding: 16px 0; }
+  .post-body { padding: 16px 20px; }
+  .post-category { font-family: 'Courier Prime', monospace; font-size: 9px; letter-spacing: 0.15em; color: var(--red); margin-bottom: 6px; text-transform: uppercase; }
+  .post-title { font-size: 15px; line-height: 1.55; margin-bottom: 6px; font-weight: 700; }
+  .post-excerpt { font-size: 12px; font-style: italic; color: var(--gray); line-height: 1.5; }
+  .post-stats { border-left: var(--rule); padding: 16px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-width: 66px; }
+  .stat-item { text-align: center; font-family: 'Courier Prime', monospace; }
+  .stat-num { font-size: 18px; font-weight: 700; line-height: 1; }
+  .stat-label { font-size: 8px; letter-spacing: 0.1em; color: var(--gray); }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state { padding: 60px 24px; text-align: center; border: var(--rule); color: var(--gray); font-style: italic; font-size: 14px; }
+
+  /* ─── DETAIL ─── */
+  .article-header { border-bottom: 3px double var(--border); padding-bottom: 20px; margin-bottom: 28px; }
+  .article-id { font-family: 'Courier Prime', monospace; font-size: 10px; color: var(--gray); letter-spacing: 0.12em; margin-bottom: 10px; }
+  .article-title { font-size: clamp(18px,4vw,30px); line-height: 1.4; margin-bottom: 14px; font-weight: 700; }
+  .article-byline { font-family: 'Courier Prime', monospace; font-size: 11px; color: var(--gray); display: flex; flex-wrap: wrap; gap: 18px; }
+  .abstract-box { border: var(--rule); border-left: 3px solid var(--ink); padding: 16px 20px; margin-bottom: 28px; background: var(--paper-dark); }
+  .abstract-label { font-family: 'Courier Prime', monospace; font-size: 9px; letter-spacing: 0.2em; margin-bottom: 8px; color: var(--gray); text-transform: uppercase; }
+  .abstract-text { font-style: italic; font-size: 14px; line-height: 1.7; }
+  .article-body { font-size: 15px; line-height: 1.9; }
+  .article-body p { margin-bottom: 16px; }
+  .article-body h3 { font-size: 13px; font-family: 'Courier Prime', monospace; letter-spacing: 0.15em; text-transform: uppercase; margin: 28px 0 12px; padding-bottom: 4px; border-bottom: var(--rule); }
+  .footnote { margin-top: 32px; padding-top: 16px; border-top: 3px double var(--border); font-family: 'Courier Prime', monospace; font-size: 11px; color: var(--gray); line-height: 1.7; }
+
+  /* ─── ACTIONS ─── */
+  .action-bar { display: flex; border: var(--rule); margin: 32px 0; }
+  .action-btn { background: none; border: none; border-right: var(--rule); padding: 12px 18px; font-family: 'Noto Serif SC', serif; font-size: 12px; cursor: pointer; transition: background 0.15s; color: var(--ink); }
+  .action-btn:last-child { border-right: none; }
+  .action-btn:hover { background: var(--paper-dark); }
+  .action-btn.liked { color: var(--red); font-weight: 700; }
+  .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ─── COMMENTS ─── */
+  .comments-section { margin-top: 40px; }
+  .comment-input-area { border: var(--rule); margin-bottom: 24px; }
+  .comment-input-label { display: block; padding: 8px 14px; border-bottom: var(--rule); font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); background: var(--paper-dark); }
+  textarea { width: 100%; border: none; background: var(--paper); font-family: 'Noto Serif SC', serif; font-size: 14px; padding: 14px; resize: vertical; min-height: 90px; color: var(--ink); outline: none; }
+  .comment-footer { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-top: var(--rule); background: var(--paper-dark); }
+  .comment-footer input { background: none; border: none; border-bottom: 1px dotted var(--gray); font-family: 'Courier Prime', monospace; font-size: 12px; color: var(--ink); outline: none; width: 160px; padding: 2px 4px; }
+  .comment-item { border: var(--rule); border-bottom: none; padding: 14px 16px; animation: fadeIn 0.3s ease; }
+  .comment-item:last-child { border-bottom: var(--rule); }
+  .comment-meta { font-family: 'Courier Prime', monospace; font-size: 10px; color: var(--gray); margin-bottom: 6px; display: flex; gap: 12px; }
+  .comment-author { color: var(--ink); font-weight: 700; }
+  .comment-text { font-size: 14px; line-height: 1.65; }
+
+  /* ─── SUBMIT ─── */
+  .submit-form { border: var(--rule); }
+  .form-section { border-bottom: var(--rule); }
+  .form-section:last-child { border-bottom: none; }
+  .form-label { display: block; padding: 10px 16px; border-bottom: var(--rule); font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; background: var(--paper-dark); color: var(--gray); }
+  .form-hint { font-style: italic; color: var(--gray); font-size: 9px; margin-left: 8px; letter-spacing: 0; text-transform: none; }
+  .form-input { width: 100%; border: none; background: var(--paper); font-family: 'Noto Serif SC', serif; font-size: 15px; padding: 14px 16px; color: var(--ink); outline: none; }
+  .form-select { width: 100%; border: none; background: var(--paper); font-family: 'Courier Prime', monospace; font-size: 13px; padding: 14px 16px; color: var(--ink); outline: none; appearance: none; cursor: pointer; }
+  .form-textarea { width: 100%; border: none; background: var(--paper); font-family: 'Noto Serif SC', serif; font-size: 14px; padding: 14px 16px; color: var(--ink); outline: none; resize: vertical; min-height: 200px; line-height: 1.8; }
+  .char-counter { font-family: 'Courier Prime', monospace; font-size: 9px; color: var(--gray); padding: 4px 16px; text-align: right; border-top: 1px dotted var(--gray); }
+  .char-counter.over { color: var(--red); }
+  .form-submit-area { padding: 20px 16px; display: flex; justify-content: space-between; align-items: center; background: var(--paper-dark); }
+  .form-disclaimer { font-family: 'Courier Prime', monospace; font-size: 9px; color: var(--gray); font-style: italic; max-width: 400px; line-height: 1.6; }
+
+  /* ─── BUTTONS ─── */
+  .submit-btn, .big-submit-btn {
+    background: var(--ink); color: var(--paper); border: none;
+    font-family: 'Noto Serif SC', serif; cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .submit-btn { font-size: 12px; padding: 6px 16px; }
+  .big-submit-btn { font-size: 14px; letter-spacing: 0.05em; padding: 12px 28px; }
+  .submit-btn:hover, .big-submit-btn:hover { background: var(--red); }
+  .big-submit-btn:active { transform: scale(0.98); }
+  .big-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ─── BACK ─── */
+  .back-btn { background: none; border: var(--rule); font-family: 'Noto Serif SC', serif; font-size: 12px; padding: 6px 14px; cursor: pointer; color: var(--gray); margin-bottom: 24px; transition: background 0.15s; display: inline-block; }
+  .back-btn:hover { background: var(--paper-dark); color: var(--ink); }
+
+  /* ─── SUCCESS ─── */
+  .success-box { border: var(--rule); border-left: 3px solid var(--red); padding: 32px; text-align: center; display: none; }
+  .success-box.show { display: block; }
+  .success-box h2 { font-size: 22px; margin-bottom: 12px; }
+  .success-box p { font-style: italic; color: var(--gray); font-size: 13px; line-height: 1.8; }
+
+  /* ─── ADMIN ─── */
+  .admin-gate { border: var(--rule); max-width: 420px; margin: 60px auto; }
+  .admin-pending-card { border: var(--rule); border-bottom: none; display: grid; grid-template-columns: 1fr auto; }
+  .admin-pending-card:last-child { border-bottom: var(--rule); }
+  .admin-card-body { padding: 16px; }
+  .admin-card-actions { border-left: var(--rule); display: flex; flex-direction: column; min-width: 80px; }
+  .admin-btn { flex: 1; border: none; background: none; font-family: 'Noto Serif SC', serif; font-size: 12px; cursor: pointer; padding: 8px; transition: background 0.15s; border-bottom: var(--rule); }
+  .admin-btn:last-child { border-bottom: none; }
+  .admin-btn.approve:hover { background: #d4edda; }
+  .admin-btn.reject:hover, .admin-btn.delete-btn:hover { background: #f8d7da; }
+  .admin-tabs { display: flex; border-bottom: var(--rule); margin-bottom: 24px; }
+  .admin-tab { background: none; border: none; border-right: var(--rule); font-family: 'Noto Serif SC', serif; font-size: 12px; padding: 10px 20px; cursor: pointer; color: var(--gray); transition: background 0.15s; }
+  .admin-tab.active { background: var(--paper-dark); color: var(--ink); font-weight: 700; }
+  .admin-logout-btn { background: none; border: var(--rule); font-family: 'Noto Serif SC', serif; font-size: 11px; padding: 4px 12px; cursor: pointer; color: var(--gray); float: right; }
+  .admin-logout-btn:hover { background: var(--paper-dark); }
+
+  /* ─── LOADING ─── */
+  .loading { padding: 40px 24px; text-align: center; color: var(--gray); font-family: 'Courier Prime', monospace; font-size: 12px; letter-spacing: 0.1em; }
+  .loading::after { content: ''; animation: dots 1.2s infinite; }
+  @keyframes dots { 0%{content:'.'}33%{content:'..'}66%{content:'...'} }
+
+  /* ─── TOAST ─── */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--paper); font-family: 'Noto Serif SC', serif; font-size: 13px; padding: 10px 24px; border: var(--rule); opacity: 0; transition: opacity 0.3s, transform 0.3s; z-index: 1000; pointer-events: none; max-width: 90vw; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 640px) {
+    .homepage-header { grid-template-columns: 1fr; }
+    .featured-post { border-right: none; border-bottom: var(--rule); }
+    .post-card { grid-template-columns: 36px 1fr auto; }
+    .header-top { display: none; }
+    .form-submit-area { flex-direction: column; gap: 12px; text-align: center; }
+    .action-btn { padding: 10px 12px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <span>第七卷 第三期 · 2026年6月</span>
+    <span>ISSN 2077-废 · 影响因子：−0.42</span>
+    <span>想起来了就出版</span>
+  </div>
+  <div class="masthead">
+    <div class="journal-name">废 纸 篓 学 刊</div>
+    <div class="journal-sub"><em>经同行评审的一无是处研究期刊</em> &nbsp;·&nbsp; 创刊于2024年，大概</div>
+  </div>
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="showPage('home',this)">本期目录</button>
+    <button class="nav-btn" onclick="showPage('submit',this)">投稿系统</button>
+    <button class="nav-btn" id="nav-admin" onclick="handleAdminNav(this)">编委会入口</button>
+  </nav>
+</header>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════ 首页 ══════ -->
+<div id="page-home" class="page active">
+  <div class="container">
+    <div id="featured-area"></div>
+    <div class="section-rule"><span class="section-label">全部已发表论文 · 按引用量排序</span></div>
+    <div class="post-list" id="post-list"><div class="loading">正在检索数据库</div></div>
+  </div>
+</div>
+
+<!-- ══════ 详情页 ══════ -->
+<div id="page-detail" class="page">
+  <div class="container">
+    <button class="back-btn" onclick="showPage('home',document.querySelector('.nav-btn'))">← 返回本期目录</button>
+    <div id="article-content"></div>
+  </div>
+</div>
+
+<!-- ══════ 投稿页 ══════ -->
+<div id="page-submit" class="page">
+  <div class="container">
+    <div class="section-rule"><span class="section-label">稿件投递系统 · 作者须知适用</span></div>
+    <div id="submit-success" class="success-box">
+      <h2>投稿成功</h2>
+      <p>您的投稿已进入待审核队列（状态：pending）。<br>编委会将以与之相称的严肃性进行评估。<br><br>
+      预计审稿周期：<em>两至三个商业永恒。</em><br>录用后将自动展示于本期目录。</p>
+    </div>
+    <div id="submit-form-wrap" class="submit-form">
+      <div class="form-section">
+        <label class="form-label">论文标题 <span class="form-hint">— 请务必听起来很重要（最多200字）</span></label>
+        <input type="text" class="form-input" id="f-title" maxlength="200" placeholder="关于……的系统性研究" oninput="updateCounter('f-title','cnt-title',200)">
+        <div class="char-counter" id="cnt-title">0 / 200</div>
+      </div>
+      <div class="form-section">
+        <label class="form-label">研究领域 <span class="form-hint">— 自由填写，如：摸鱼动力学、存在主义危机研究</span></label>
+        <input type="text" class="form-input" id="f-category" maxlength="50" placeholder="请输入您的研究领域">
+      </div>
+      <div class="form-section">
+        <label class="form-label">摘要 <span class="form-hint">— 不超过2000字，至少用一次"因此"</span></label>
+        <textarea class="form-textarea" id="f-abstract" maxlength="2000" placeholder="本文就……展开系统性研究，通过……方法，发现……因此……" oninput="updateCounter('f-abstract','cnt-abstract',2000)"></textarea>
+        <div class="char-counter" id="cnt-abstract">0 / 2000</div>
+      </div>
+      <div class="form-section">
+        <label class="form-label">作者署名 <span class="form-hint">— 笔名、网名、外号均可（可留空）</span></label>
+        <input type="text" class="form-input" id="f-author" maxlength="50" placeholder="某不愿透露姓名的研究人员">
+      </div>
+      <div class="form-submit-area">
+        <div class="form-disclaimer">投稿即表示您确认：本研究为原创，未曾在任何有声誉的期刊发表，且同意我们尚未拟定的各项条款。</div>
+        <button class="big-submit-btn" id="submit-main-btn" onclick="handleSubmit()">提交同行评审 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ 管理员登录 ══════ -->
+<div id="page-admin-gate" class="page">
+  <div class="container">
+    <div class="admin-gate">
+      <div class="form-label" style="text-align:center;padding:16px;">编委会成员入口</div>
+      <div style="padding:24px;">
+        <p style="font-family:'Courier Prime',monospace;font-size:11px;color:var(--gray);margin-bottom:16px;font-style:italic;text-align:center;">仅限授权人员。未经授权的访问将以措辞严厉的脚注应对。</p>
+        <label class="form-label" style="background:none;padding:0 0 6px;border:none;">管理员邮箱</label>
+        <input type="email" class="form-input" id="admin-email" style="border:1px solid var(--border);margin-bottom:12px;padding:10px 12px;" placeholder="admin@example.com">
+        <label class="form-label" style="background:none;padding:0 0 6px;border:none;">访问密码</label>
+        <input type="password" class="form-input" id="admin-pw" style="border:1px solid var(--border);margin-bottom:16px;padding:10px 12px;" placeholder="············" onkeydown="if(event.key==='Enter')adminLogin()">
+        <button class="big-submit-btn" id="login-btn" style="width:100%;text-align:center;" onclick="adminLogin()">身份验证 →</button>
+        <p style="font-family:'Courier Prime',monospace;font-size:9px;color:var(--gray);text-align:center;margin-top:12px;">在 Supabase 控制台 Authentication → Users 添加管理员账号</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ 管理面板 ══════ -->
+<div id="page-admin" class="page">
+  <div class="container">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <div class="section-rule" style="flex:1;margin:0 16px 0 0;"><span class="section-label">编辑部工作台 · 请以与学术相称的严肃性操作</span></div>
+      <button class="admin-logout-btn" onclick="adminLogout()">退出登录</button>
+    </div>
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="switchAdminTab('pending',this)" id="tab-pending">待审稿件</button>
+      <button class="admin-tab" onclick="switchAdminTab('published',this)" id="tab-published">已发表</button>
+    </div>
+    <div id="admin-pending"><div class="loading">加载中</div></div>
+    <div id="admin-published" style="display:none;"><div class="loading">加载中</div></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// ① 配置 Supabase（填入你自己的 URL 和 Key）
+// ═══════════════════════════════════════════
+const SUPABASE_URL = 'https://bmaeychimmhsnamfidyb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtYWV5Y2hpbW1oc25hbWZpZHliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTY5MTksImV4cCI6MjA5NjQ5MjkxOX0.AfDU9pK_86k48Of0Oz1-3jpdr8seP8-REjSdYcPzeM4';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+    storage: (function() {
+      // 在隐私模式/受限WebView中 localStorage 可能不可用，
+      // 此时降级为内存存储，避免 Supabase SDK 抛出 DataCloneError
+      try {
+        const testKey = '__sb_test__';
+        window.localStorage.setItem(testKey, '1');
+        window.localStorage.removeItem(testKey);
+        return window.localStorage;
+      } catch (e) {
+        const mem = {};
+        return {
+          getItem: (k) => (k in mem ? mem[k] : null),
+          setItem: (k, v) => { mem[k] = v; },
+          removeItem: (k) => { delete mem[k]; }
+        };
+      }
+    })()
+  }
+});
+
+// ═══════════════════════════════════════════
+// ② 安全工具函数
+// ═══════════════════════════════════════════
+
+// XSS 防护：所有用户输入渲染前必须经过此函数
+function esc(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .slice(0, 5000);
+}
+
+// 字符计数器
+function updateCounter(inputId, counterId, max) {
+  const len = document.getElementById(inputId).value.length;
+  const el = document.getElementById(counterId);
+  el.textContent = `${len} / ${max}`;
+  el.className = 'char-counter' + (len > max * 0.9 ? ' over' : '');
+}
+
+// 生成用户指纹（用于防重复点赞）
+function getFingerprint() {
+  const key = 'jnk_fp';
+  try {
+    let fp = localStorage.getItem(key);
+    if (!fp) {
+      fp = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(key, fp);
+    }
+    return fp;
+  } catch (e) {
+    return 'anon-' + Math.random().toString(36).slice(2);
+  }
+}
+
+// 格式化时间
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// 按钮加载状态
+function setBtnLoading(id, loading, text = '提交中……') {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) { btn._orig = btn.textContent; btn.textContent = text; }
+  else if (btn._orig) btn.textContent = btn._orig;
+}
+
+// ═══════════════════════════════════════════
+// ③ 数据加载
+// ═══════════════════════════════════════════
+
+let allPosts = [];
+let currentPostId = null;
+let likedSet;
+try {
+  likedSet = new Set(JSON.parse(localStorage.getItem('jnk_likes') || '[]'));
+} catch (e) {
+  likedSet = new Set();
+}
+
+async function loadPosts() {
+  const out = document.getElementById('post-list');
+  out.innerHTML = '<div class="loading">正在检索数据库</div>';
+
+  // 先用最原始的 fetch 直接测试 REST API，绕开 SDK，便于排查
+  try {
+    const testUrl = SUPABASE_URL + '/rest/v1/Trashhhhhhhhhhh?select=*&status=eq.approved&order=likes_count.desc';
+    const resp = await fetch(testUrl, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      }
+    });
+    const text = await resp.text();
+    if (!resp.ok) {
+      out.innerHTML = '<div class="empty-state">REST 请求失败（HTTP ' + resp.status + '）：<br>' + esc(text.slice(0,300)) + '</div>';
+      return;
+    }
+    let data;
+    try { data = JSON.parse(text); } catch(e) {
+      out.innerHTML = '<div class="empty-state">返回内容非JSON：<br>' + esc(text.slice(0,300)) + '</div>';
+      return;
+    }
+    allPosts = Array.isArray(data) ? data : [];
+    renderFeatured();
+    renderPostList();
+  } catch (e) {
+    out.innerHTML = '<div class="empty-state">网络请求异常：' + esc(String(e && e.message ? e.message : e)) + '</div>';
+  }
+}
+
+function renderFeatured() {
+  const area = document.getElementById('featured-area');
+  if (allPosts.length === 0) {
+    area.innerHTML = '';
+    return;
+  }
+  const top = allPosts[0];
+  const rest = allPosts.slice(1, 4);
+  area.innerHTML = `
+    <div class="homepage-header">
+      <div class="featured-post" onclick="openPost(${top.id})">
+        <div class="featured-label">★ 主编推荐 · 本期引用最多</div>
+        <div class="featured-title">${esc(top.title)}</div>
+        <div class="featured-abstract">${esc(top.abstract).substring(0,120)}……</div>
+      </div>
+      <div class="sidebar-posts">
+        ${rest.map(p => `
+          <div class="sidebar-item" onclick="openPost(${p.id})">
+            <div class="sidebar-item-title">${esc(p.title)}</div>
+            <div class="sidebar-meta">${p.likes_count}次引用</div>
+          </div>
+        `).join('')}
+        ${rest.length === 0 ? '<div class="sidebar-item"><div class="sidebar-meta" style="padding:8px 0">更多论文即将收录……</div></div>' : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderPostList() {
+  const el = document.getElementById('post-list');
+  if (allPosts.length === 0) {
+    el.innerHTML = '<div class="empty-state">本期尚无已发表论文。<br>成为第一个投稿的研究者吧。</div>';
+    return;
+  }
+  el.innerHTML = allPosts.map(p => `
+    <div class="post-card" onclick="openPost(${p.id})">
+      <div class="post-number">JNK-${String(p.id).padStart(4,'0')}</div>
+      <div class="post-body">
+        <div class="post-title">${esc(p.title)}</div>
+        <div class="post-excerpt">${esc(p.abstract).substring(0,100)}……</div>
+      </div>
+      <div class="post-stats">
+        <div class="stat-item">
+          <div class="stat-num" id="likes-${p.id}">${p.likes_count}</div>
+          <div class="stat-label">引用</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════
+// ④ 文章详情
+// ═══════════════════════════════════════════
+
+async function openPost(id) {
+  currentPostId = id;
+  const post = allPosts.find(p => p.id === id);
+  if (!post) return;
+
+  const liked = likedSet.has(id);
+
+  // 加载评论
+  const { data: comments } = await db
+    .from('comments')
+    .select('*')
+    .eq('post_id', id)
+    .order('created_at', { ascending: false });
+
+  const commentHtml = (comments || []).map(c => `
+    <div class="comment-item">
+      <div class="comment-meta">
+        <span class="comment-author">${esc(c.author)}</span>
+        <span>${esc(fmtDate(c.created_at))}</span>
+      </div>
+      <div class="comment-text">${esc(c.content)}</div>
+    </div>
+  `).join('') || '<div style="padding:20px;color:var(--gray);font-style:italic;font-size:13px;text-align:center;">暂无评审意见，成为第一个评审人。</div>';
+
+  document.getElementById('article-content').innerHTML = `
+    <div class="article-header">
+      <div class="article-id">JNK-${String(post.id).padStart(4,'0')} · 收稿日期 ${esc(fmtDate(post.created_at))} · 最终录用：总有一天</div>
+      <div class="article-title">${esc(post.title)}</div>
+      <div class="article-byline">
+        <span>✍ ${esc(post.author_name)}</span>
+        <span>📅 发表于 ${esc(fmtDate(post.created_at))}</span>
+        <span>🏛 废纸篓学刊 第七卷</span>
+      </div>
+    </div>
+    <div class="abstract-box">
+      <div class="abstract-label">摘要</div>
+      <div class="abstract-text">${esc(post.abstract)}</div>
+    </div>
+    <div class="article-body">${esc(post.content).split('\n').map(p=>`<p>${p}</p>`).join('')}</div>
+    <div class="footnote">
+      <strong>利益冲突声明：</strong>作者声明不存在任何利益冲突，无论是财务上的还是道德层面的。<br>
+      <strong>资金来源：</strong>本研究未获任何外部资助，亦未获任何内部资助。<br>
+      <strong>致谢：</strong>作者感谢任何一位都没有，因为没有任何一位提供了切实帮助。
+    </div>
+    <div class="action-bar">
+      <button class="action-btn ${liked?'liked':''}" id="like-btn" onclick="toggleLike(${id})">
+        ${liked?'★':'☆'} 引用本文（<span id="like-count">${post.likes_count}</span>）
+      </button>
+      <button class="action-btn" onclick="document.getElementById('comment-input').focus()">
+        ✉ 同行评议（${(comments||[]).length}）
+      </button>
+      <button class="action-btn" onclick="copyLink()">⎘ 复制链接</button>
+    </div>
+    <div class="comments-section">
+      <div class="section-rule"><span class="section-label">同行评议 · 公开评审区</span></div>
+      <div class="comment-input-area">
+        <label class="comment-input-label">提交评审意见</label>
+        <textarea id="comment-input" maxlength="1000" placeholder="请在此输入您对本文的学术评价……"></textarea>
+        <div class="comment-footer">
+          <input type="text" id="comment-author" maxlength="50" placeholder="评审人身份（可匿名）">
+          <button class="submit-btn" id="comment-submit-btn" onclick="addComment(${id})">提交评审 →</button>
+        </div>
+      </div>
+      <div id="comment-list">${commentHtml}</div>
+    </div>
+  `;
+  showPageById('page-detail');
+}
+
+// ═══════════════════════════════════════════
+// ⑤ 点赞（防重复）
+// ═══════════════════════════════════════════
+
+async function toggleLike(postId) {
+  const btn = document.getElementById('like-btn');
+  btn.disabled = true;
+  const fp = getFingerprint();
+  const liked = likedSet.has(postId);
+  const post = allPosts.find(p => p.id === postId);
+  const currentLikes = post ? post.likes_count : 0;
+
+  if (liked) {
+    // 取消点赞
+    await db.from('likes').delete().eq('post_id', postId).eq('fingerprint', fp);
+    const newCount = Math.max(0, currentLikes - 1);
+    await db.from('Trashhhhhhhhhhh').update({ likes_count: newCount }).eq('id', postId);
+    likedSet.delete(postId);
+    if (post) post.likes_count = newCount;
+    showToast('引用已撤销。重新考虑中……');
+  } else {
+    // 点赞（数据库唯一约束会阻止重复）
+    const { error } = await db.from('likes').insert({ post_id: postId, fingerprint: fp });
+    if (error) { btn.disabled = false; showToast('您已引用过本文。'); return; }
+    const newCount = currentLikes + 1;
+    await db.from('Trashhhhhhhhhhh').update({ likes_count: newCount }).eq('id', postId);
+    likedSet.add(postId);
+    if (post) post.likes_count = newCount;
+    showToast('引用已记录。您对科学的贡献已被注意到。');
+  }
+
+  try { localStorage.setItem('jnk_likes', JSON.stringify([...likedSet])); } catch (e) {}
+  document.getElementById('like-count').textContent = post ? post.likes_count : 0;
+  btn.className = 'action-btn' + (likedSet.has(postId)?' liked':'');
+  btn.disabled = false;
+}
+
+// ═══════════════════════════════════════════
+// ⑥ 评论（XSS 安全）
+// ═══════════════════════════════════════════
+
+async function addComment(postId) {
+  const rawText   = document.getElementById('comment-input').value.trim();
+  const rawAuthor = document.getElementById('comment-author').value.trim();
+
+  if (!rawText) { showToast('评审意见须包含文字。学术界亦然。'); return; }
+  if (rawText.length > 1000) { showToast('评审意见不能超过1000字。'); return; }
+
+  setBtnLoading('comment-submit-btn', true, '提交中……');
+
+  const { error } = await db.from('comments').insert({
+    post_id: postId,
+    author:  rawAuthor || '匿名审稿人',
+    content: rawText
+  });
+
+  setBtnLoading('comment-submit-btn', false);
+
+  if (error) { showToast('提交失败，请稍后再试。'); return; }
+
+  // 重新渲染评论列表
+  const { data: comments } = await db
+    .from('comments').select('*')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: false });
+
+  document.getElementById('comment-list').innerHTML = (comments||[]).map(c => `
+    <div class="comment-item">
+      <div class="comment-meta">
+        <span class="comment-author">${esc(c.author)}</span>
+        <span>${esc(fmtDate(c.created_at))}</span>
+      </div>
+      <div class="comment-text">${esc(c.content)}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('comment-input').value = '';
+  document.getElementById('comment-author').value = '';
+  showToast('评审意见已提交。科学界感谢您的贡献。');
+}
+
+// ═══════════════════════════════════════════
+// ⑦ 投稿
+// ═══════════════════════════════════════════
+
+async function handleSubmit() {
+  const title      = document.getElementById('f-title').value.trim();
+  const abstract   = document.getElementById('f-abstract').value.trim();
+  const category   = document.getElementById('f-category').value;
+  const authorName = document.getElementById('f-author').value.trim() || '匿名研究员';
+
+  // ─── 校验 ───
+  if (!title)    { showToast('请填写论文标题。'); return; }
+  if (!abstract) { showToast('请填写摘要内容。'); return; }
+  if (!category) { showToast('请填写研究领域。'); return; }
+  if (title.length > 200)    { showToast('标题不能超过200字。'); return; }
+  if (abstract.length > 2000){ showToast('摘要不能超过2000字。'); return; }
+
+  setBtnLoading('submit-main-btn', true);
+
+  // ─── 提交到 Supabase ───
+  // 表：Trashhhhhhhhhhh
+  // 字段：title / author_name / abstract / content / status / likes_count
+  // 当前表没有 category 列，研究领域暂时不会存入数据库
+  const { data, error } = await db.from('Trashhhhhhhhhhh').insert({
+    title:       title,
+    author_name: authorName,
+    abstract:    abstract,
+    content:     abstract,
+    status:      'pending',
+    likes_count: 0
+  }).select();
+
+  setBtnLoading('submit-main-btn', false);
+
+  // ─── 失败：显示具体错误信息 ───
+  if (error) {
+    console.error('投稿失败：', error);
+    showToast('投稿失败：' + (error.message || '未知错误，请检查数据库字段是否匹配。'));
+    return;
+  }
+
+  // ─── 成功：显示投稿成功 ───
+  document.getElementById('submit-form-wrap').style.display = 'none';
+  document.getElementById('submit-success').classList.add('show');
+  showToast('投稿成功！稿件已收悉，双盲评审程序已启动。');
+}
+
+// ═══════════════════════════════════════════
+// ⑧ 管理员（Supabase Auth）
+// ═══════════════════════════════════════════
+
+async function checkAdminSession() {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    await loadAdminData();
+    showPageById('page-admin');
+    return true;
+  }
+  return false;
+}
+
+async function adminLogin() {
+  const email = document.getElementById('admin-email').value.trim();
+  const pw    = document.getElementById('admin-pw').value;
+  if (!email || !pw) { showToast('请填写邮箱和密码。'); return; }
+
+  setBtnLoading('login-btn', true, '验证中……');
+  const { error } = await db.auth.signInWithPassword({ email, password: pw });
+  setBtnLoading('login-btn', false);
+
+  if (error) { showToast('登录失败：' + error.message); return; }
+
+  await loadAdminData();
+  showPageById('page-admin');
+}
+
+async function adminLogout() {
+  await db.auth.signOut();
+  showPage('home', document.querySelector('.nav-btn'));
+  showToast('已退出编委会。');
+}
+
+async function handleAdminNav(btn) {
+  const isAdmin = await checkAdminSession();
+  if (!isAdmin) showPage('admin-gate', btn);
+}
+
+async function loadAdminData() {
+  await loadAdminPending();
+  await loadAdminPublished();
+}
+
+async function loadAdminPending() {
+  const { data } = await db.from('Trashhhhhhhhhhh').select('*').eq('status','pending').order('created_at', {ascending:false});
+  const el = document.getElementById('admin-pending');
+  document.getElementById('tab-pending').textContent = `待审稿件（${(data||[]).length}）`;
+  if (!data || data.length === 0) {
+    el.innerHTML = '<div class="empty-state">暂无待审稿件。编辑部可以喝杯茶了。</div>';
+    return;
+  }
+  el.innerHTML = data.map(p => `
+    <div class="admin-pending-card" id="pc-${p.id}">
+      <div class="admin-card-body">
+        <div class="post-title" style="font-size:14px;margin-bottom:6px;">${esc(p.title)}</div>
+        <div style="font-family:'Courier Prime',monospace;font-size:10px;color:var(--gray);">
+          ${esc(p.author_name)} · ${esc(fmtDate(p.created_at))} 投稿
+        </div>
+        <div style="font-family:'Courier Prime',monospace;font-size:10px;color:var(--gray);margin-top:4px;font-style:italic;">
+          ${esc(p.abstract).substring(0,80)}……
+        </div>
+      </div>
+      <div class="admin-card-actions">
+        <button class="admin-btn approve" onclick="adminAction(${p.id},'approved')">✓ 录用</button>
+        <button class="admin-btn reject"  onclick="adminAction(${p.id},'rejected')">✗ 拒稿</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadAdminPublished() {
+  const { data } = await db.from('Trashhhhhhhhhhh').select('*').eq('status','approved').order('likes_count',{ascending:false});
+  const el = document.getElementById('admin-published');
+  if (!data || data.length === 0) {
+    el.innerHTML = '<div class="empty-state">暂无已发表论文。</div>';
+    return;
+  }
+  el.innerHTML = data.map(p => `
+    <div class="admin-pending-card" id="pp-${p.id}">
+      <div class="admin-card-body">
+        <div class="post-title" style="font-size:13px;margin-bottom:4px;">${esc(p.title).substring(0,60)}……</div>
+        <div style="font-family:'Courier Prime',monospace;font-size:10px;color:var(--gray);">
+          ${esc(p.author_name)} · ${p.likes_count}次引用
+        </div>
+      </div>
+      <div class="admin-card-actions">
+        <button class="admin-btn delete-btn" onclick="adminRetract(${p.id})">🗑 撤稿</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function adminAction(postId, action) {
+  const { data:{ session } } = await db.auth.getSession();
+  if (!session) { showToast('会话已过期，请重新登录。'); return; }
+
+  const update = { status: action === 'approved' ? 'approved' : 'rejected' };
+
+  const { error } = await db.from('Trashhhhhhhhhhh').update(update).eq('id', postId);
+  if (error) { showToast('操作失败：' + error.message); return; }
+
+  const card = document.getElementById(`pc-${postId}`);
+  if (card) {
+    card.style.opacity = '0.4';
+    card.style.pointerEvents = 'none';
+    card.querySelector('.admin-card-actions').innerHTML =
+      `<div style="padding:12px;font-size:12px;text-align:center;color:${action==='approved'?'green':'#8b1a1a'}">
+        ${action==='approved'?'✓ 已录用':'✗ 已拒稿'}
+      </div>`;
+  }
+  showToast(action === 'approved' ? '稿件已录用。科学向前迈进了一步。' : '稿件已拒绝。祝作者来世好运。');
+  await loadAdminData();
+}
+
+async function adminRetract(postId) {
+  const { data:{ session } } = await db.auth.getSession();
+  if (!session) { showToast('会话已过期，请重新登录。'); return; }
+  if (!confirm('确认撤稿？此操作将把文章状态改为 rejected，且将被记录于页边注释之中。')) return;
+
+  const { error } = await db.from('Trashhhhhhhhhhh').update({ status: 'rejected' }).eq('id', postId);
+  if (error) { showToast('撤稿失败：' + error.message); return; }
+
+  showToast('论文已撤稿。以应有的学术体面处理完毕。');
+  await loadAdminPublished();
+}
+
+function switchAdminTab(tab, btn) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('admin-pending').style.display  = tab === 'pending'   ? 'block' : 'none';
+  document.getElementById('admin-published').style.display = tab === 'published' ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════
+// ⑨ 导航
+// ═══════════════════════════════════════════
+
+function showPage(name, btn) {
+  const map = { home:'page-home', submit:'page-submit', 'admin-gate':'page-admin-gate' };
+  // 重置投稿表单
+  if (name === 'submit') {
+    document.getElementById('submit-form-wrap').style.display = 'block';
+    document.getElementById('submit-success').classList.remove('show');
+  }
+  showPageById(map[name] || 'page-home');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+function showPageById(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(location.href).then(
+    () => showToast('链接已复制。'),
+    () => showToast('复制失败，请手动复制地址栏链接。')
+  );
+}
+
+// ─── Toast ───
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ═══════════════════════════════════════════
+// ⑩ 初始化
+// ═══════════════════════════════════════════
+loadPosts();
+</script>
+</body>
+</html>
